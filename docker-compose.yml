@@ -1,0 +1,48 @@
+#services:
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: builder-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - builder
+
+  backend:
+    build: .
+    container_name: builder-backend
+    restart: unless-stopped
+
+    ports:
+     - "8081:8081"
+
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES-DB}
+      SPRING_DATASOURCE_USERNAME:  ${POSTGRES-USER}
+      SPRING_DATASOURCE_PASSWORD:  ${POSTGRES-PASSWORD}
+    depends_on:
+     postgres:
+       condition: service_healthy
+    networks:
+      - builder
+
+networks:
+  builder:
+    driver: bridge
+volumes:
+  pgdata:
